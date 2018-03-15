@@ -17,6 +17,6 @@ var usersSchema = new Schema({
   "status": Boolean,
   "IDCardImg": String,
   "StuCardImg": String
-});
+},{versionKey: false});
 
 module.exports = mongoose.model('User',usersSchema);
