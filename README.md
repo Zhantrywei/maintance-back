@@ -47,3 +47,6 @@ npm install mongoose --save
 2. 数据库命名: maintanceDB
     1. 文档结构: users
     2. 文档结构: records
+
+3. 注册为维修工需要注意的流程
+    1. stuId 失焦后就请求验证用户是否被注册,如果已经注册就提示

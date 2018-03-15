@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var multer = require('multer');
 var fs = require('fs');
 var path = require('path');
 var formidable = require('formidable');
@@ -180,25 +179,7 @@ router.post('/register', function (req, res, next) {
   })
 
 })
-
-// const storage = multer.diskStorage({
-//   destination: '../public/images/user',
-//   filename: function (req, file, cb) {
-//     cb(null, file.fieldname + '-' + Date.now())
-//   }
-// })
-
-/* multer({
-  dest|storage: '存储文件位置',
-  fileFilter: '文件过滤器',
-  limits: '文件大小限制',
-  preservePath: '保存包含文件名的完整文件路径'
-})*/
-// var upload = multer(
-//   {
-//     dest: '\\public\\images\\user\\'
-//   }
-// );
+ 
 
 /* POST files. */
 router.post('/upload', function (req, res, next) {
