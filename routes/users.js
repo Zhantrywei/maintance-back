@@ -109,6 +109,8 @@ router.post('/login', function (req, res, next) {
   })
 });
 
+
+
 /* POST users register. */
 router.post('/register', function (req, res, next) {
   var registerForm = req.body.registerform;
@@ -168,6 +170,52 @@ router.post('/register', function (req, res, next) {
           "StuCardImg": registerForm.StuCardImg ? registerForm.StuCardImg : null
         }
 
+        //只有维修用户才需要操作文件
+        if (registerForm.usertype == 'maintainer') {
+          console.log("进入操作文件")
+          //文件移动的目录文件夹，不存在时创建目标文件夹  
+          var targetDir = path.join(__dirname + '/../public/images/user/', registerForm.stuId);
+          if (!fs.existsSync(targetDir)) {
+            fs.mkdir(targetDir);
+          }
+          //获取tmpPath
+          var tmpIDCardImg = registerForm.tmpIDCardImg;
+          // console.log("tmpIDCardImg: ", tmpIDCardImg);
+          var tmpStuCardImg = registerForm.tmpStuCardImg;
+          // console.log("tmpStuCardImg: ", tmpStuCardImg);
+          var IDCardImgName = registerForm.IDCardImg.substring(registerForm.IDCardImg.lastIndexOf('/') + 1);
+          // console.log("IDCardImgName: ", IDCardImgName);
+          var StuCardImgName = registerForm.StuCardImg.substring(registerForm.StuCardImg.lastIndexOf('/') + 1);
+          // console.log("StuCardImgName: ", StuCardImgName);
+
+          var targetIDCardFile = path.join(targetDir, IDCardImgName);
+          var targetStuCardFile = path.join(targetDir, StuCardImgName);
+
+          //移动文件  
+          fs.renameSync(tmpIDCardImg, targetIDCardFile, function (err) {
+            if (err) {
+              console.info(err);
+              res.json({
+                status: -1,
+                message: '操作失败'
+              });
+            }
+          });
+
+          //移动文件  
+          fs.renameSync(tmpStuCardImg, targetStuCardFile, function (err) {
+            if (err) {
+              console.info(err);
+              res.json({
+                status: -1,
+                message: '操作失败'
+              });
+            }
+          });
+        }
+
+
+
         var newUser = new User(insertForm);
         newUser.save(function (insertErr, insertDoc) {
           if (insertErr) {
@@ -191,7 +239,9 @@ router.post('/register', function (req, res, next) {
 /* POST users checkstuid. */
 router.post('/checkstuid', function (req, res, next) {
   console.log("checkstuid: ", req.body.stuId);
-  User.findOne({ "stuId": req.body.stuId }, function (err, doc) {
+  User.findOne({
+    "stuId": req.body.stuId
+  }, function (err, doc) {
     if (err) {
       res.json({
         status: '0',
@@ -213,10 +263,25 @@ router.post('/checkstuid', function (req, res, next) {
   })
 })
 
+//传入file
+function checkFileExt(file, ext) {
+  //获取后缀名称
+  console.log("文件路径:", file.path);
+  console.log("文件类型:", file.type);
+  var fileExt1 = file.path.substring(file.path.lastIndexOf('.'));
+  console.log("fileExt1:", fileExt1);
+  var fileExt2 = '.' + file.type.substring(file.type.lastIndexOf('/') + 1);
+  console.log("fileExt2:", fileExt2);
+  console.log("校验的后缀名: ", ext);
+  if (ext.indexOf(fileExt1.toLowerCase()) !== -1 && ext.indexOf(fileExt2.toLocaleLowerCase()) !== -1) {
+    return true;
+  } else {
+    return false;
+  }
+}
 
 /* POST files. */
 router.post('/upload', function (req, res, next) {
-  console.log("req.body: ",req);
   var form = new formidable.IncomingForm();
   form.uploadDir = path.join(__dirname + '/../', 'tmp'); //文件保存的临时目录为当前项目下的tmp文件夹
   if (!fs.existsSync(form.uploadDir)) {
@@ -225,37 +290,51 @@ router.post('/upload', function (req, res, next) {
   form.maxFieldsSize = 500 * 1024; //大小限制为最大500k
   form.keepExtensions = true; //使用文件的原扩展名  
   form.parse(req, function (err, fields, file) {
+    //fields 获取传送过来的data数据对象
+    var stuId = fields.stuId;
+    //设置路径
     var filePath = '';
-    console.log("file: ", file);
-    //获取文件拓展名
-    console.log(".的位置： ",filePath.lastIndexOf('.'))
-    var fileExt = filePath.substring(filePath.lastIndexOf('.'));
-    //判断文件拓展名是否符合要求
-    if (('.jpg.jpeg.png.gif').indexOf(fileExt.toLowerCase()) === -1) {
-      var err = new Error('此文件类型不允许上传');
-      res.json({
-        status: -1,
-        message: '此文件类型不允许上传'
-      });
-    } else {
-      //以当前时间戳对上传文件进行重命名
-      var fileName = new Date().getTime() + fileExt;
-    }
+    //文件名称
+    var fileName = '';
     //提交的文件的form中上传文件的input名分别为IDCardImg和StuCardImg，从当中获取他们的各自信息
     if (file.IDCardImg) {
-      console.log("fileName: ",fileName);
-      console.log("fileExt: ",fileExt);
-      filePath = file.IDCardImg.path;
-      res.json({
-        status: '0',
-        msg: 'http://localhost:3000/public/images/user/'+fileName
-      })
+      console.log(checkFileExt(file.IDCardImg, '.jpg.jpeg.png.gif'));
+      if (checkFileExt(file.IDCardImg, '.jpg.jpeg.png.gif')) {
+        fileName = 'IDCardImg' + new Date().getTime() + file.IDCardImg.path.substring(file.IDCardImg.path.lastIndexOf('.'));
+        res.json({
+          status: 0,
+          msg: "上传成功",
+          result: {
+            imgUrl: 'http://localhost:3000/public/images/user/' + stuId + '/' + fileName,
+            tmpUrl: file.IDCardImg.path,
+            filename: 'IDCardImg'
+          }
+        })
+      } else {
+        res.json({
+          status: -1,
+          msg: '此文件类型不允许上传'
+        })
+      }
     } else if (file.StuCardImg) {
-      filePath = file.StuCardImg.path;
-      res.json({
-        status: '0',
-        msg: 'http://localhost:3000/public/images/user/'+fileName
-      })
+      console.log(checkFileExt(file.StuCardImg, '.jpg.jpeg.png.gif'));
+      if (checkFileExt(file.StuCardImg, '.jpg.jpeg.png.gif')) {
+        fileName = 'StuCardImg' + new Date().getTime() + file.StuCardImg.path.substring(file.StuCardImg.path.lastIndexOf('.'));
+        res.json({
+          status: 0,
+          msg: "上传成功",
+          result: {
+            imgUrl: 'http://localhost:3000/public/images/user/' + stuId + '/' + fileName,
+            tmpUrl: file.StuCardImg.path,
+            filename: 'StuCardImg'
+          }
+        })
+      } else {
+        res.json({
+          status: -1,
+          msg: '此文件类型不允许上传'
+        })
+      }
     } else {
       res.json({
         status: -1,
