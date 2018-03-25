@@ -16,7 +16,8 @@ var usersSchema = new Schema({
   "exist": Boolean,
   "status": Boolean,
   "IDCardImg": String,
-  "StuCardImg": String
+  "StuCardImg": String,
+  "position": Object
 },{versionKey: false});
 
 module.exports = mongoose.model('User',usersSchema);

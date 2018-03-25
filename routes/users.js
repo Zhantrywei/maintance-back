@@ -341,56 +341,69 @@ router.post('/upload', function (req, res, next) {
         msg: '上传的文件名有误'
       })
     }
-    //
-
-    //如果提交文件的form中将上传文件的input名设置为file，就从file中取上传文件。否则取for in循环第一个上传的文件。  
-    //   if (file.file) {
-    //     filePath = file.file.path;
-    //   } else {
-    //     for (var key in file) {
-    //       if (file[key].path && filePath === '') {
-    //         filePath = file[key].path;
-    //         break;
-    //       }
-    //     }
-    //   }
-    //   //文件移动的目录文件夹，不存在时创建目标文件夹  
-    //   var targetDir = path.join(__dirname+'/../public/images/', 'user');
-    //   if (!fs.existsSync(targetDir)) {
-    //     fs.mkdir(targetDir);
-    //   }
-    //   var fileExt = filePath.substring(filePath.lastIndexOf('.'));
-    //   //判断文件类型是否允许上传  
-    //   if (('.jpg.jpeg.png.gif').indexOf(fileExt.toLowerCase()) === -1) {
-    //     var err = new Error('此文件类型不允许上传');
-    //     res.json({
-    //       code: -1,
-    //       message: '此文件类型不允许上传'
-    //     });
-    //   } else {
-    //     //以当前时间戳对上传文件进行重命名  
-    //     var fileName = new Date().getTime() + fileExt;
-    //     var targetFile = path.join(targetDir, fileName);
-    //     //移动文件  
-    //     fs.rename(filePath, targetFile, function (err) {
-    //       if (err) {
-    //         console.info(err);
-    //         res.json({
-    //           code: -1,
-    //           message: '操作失败'
-    //         });
-    //       } else {
-    //         //上传成功，返回文件的相对路径  
-    //         var fileUrl = 'http://localhost:3000/public/images/user/' + fileName;
-    //         res.json({
-    //           code: 0,
-    //           fileUrl: fileUrl
-    //         });
-    //       }
-    //     });
-    //   }
   });
 });
+
+/* POST All users*/
+router.get('/lists', function(req,res,next){
+  User.find(function(err,doc){
+    if(err){
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    }else {
+      if (doc) {
+        res.json({
+          status: '1',
+          msg: "获取所有用户表成功",
+          result: doc
+        })
+      } else {
+        res.json({
+          status: '0',
+          msg: "获取所有用户表失败"
+        })
+      }
+    }
+
+  })
+})
+
+/* POST position */
+router.post('/position',function(req,res,next){
+  var position = req.body.position;
+  var stuId = req.body.stuId;
+  console.log("position: ",position);
+  console.log("stuId: ",stuId);
+
+  //更新位置  
+  var conditions = {stuId: req.body.stuId};  
+  var updates = {$set: {position: position}};
+  User.update(conditions, updates, function (error) {  
+      if (error) {  
+          console.error(error);  
+      } else {  
+          console.error("更新位置成功")  
+          res.cookie("position", {lng: position.lng, lat: position.lat}, {
+            path: '/',
+            maxAge: 60
+          })
+          res.json({
+            status: '1',
+            msg: '定位修改成功'
+          })
+      }  
+  });  
+  //查询更新后的数据  
+  // User.findOne({stuId: req.body.stuId}, function (error, doc) {  
+  //     if (error) {  
+  //         console.error(error)  
+  //     } else {  
+  //         console.error("更新后数据：", doc)  
+  //     }  
+  // }); 
+})
 
 
 module.exports = router;
