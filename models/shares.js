@@ -5,7 +5,7 @@ var sharesSchema = new Schema({
   "shareUserId": String,
   "shareStuId": String,
   "shareName": String,
-  "shareTitle": Object,
+  "shareTitle": String,
   "shareDesc": String,
   "shareImgs": Array,
   "comments": Array,

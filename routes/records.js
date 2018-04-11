@@ -22,8 +22,71 @@ mongoose.connection.on("disconnected", function () {
 
 
 /* 提交报修表单,插入数据库 */
-router.post('/apply',function(req,res,next){
-   console.log("/apply-req.body: ",req.body);
+router.post('/apply', function (req, res, next) {
+  console.log("/apply-req.body: ", req.body);
+  var applyId = req.body.applyId;
+  var applyStuId = req.body.applyStuId;
+  var applyName = req.body.applyName;
+  var applyPosition = req.body.applyPosition;
+  var tmpImages = req.body.applyForm.tmpImages;
+  var images = req.body.applyForm.images;
+  var imagesName = images.substring(images.lastIndexOf('/') + 1);
+  var theme = req.body.applyForm.theme;
+  var content = req.body.applyForm.content;
+  var applyTime = req.body.applyTime;
+
+
+  //操作图片存储
+  //文件移动的目录文件夹，不存在时创建目标文件夹  
+  var targetDir = path.join(__dirname + '/../public/images/record/', applyStuId);
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdir(targetDir);
+  }
+
+  var targetFile = path.join(targetDir, imagesName);
+  fs.renameSync(tmpImages, targetFile, function (err) {
+    if (err) {
+      console.info(err);
+      res.json({
+        status: -1,
+        message: '操作失败'
+      });
+    }
+  });
+
+  var insertForm = {
+    "applyId": applyId,
+    "applyStuId": applyStuId,
+    "applyName": applyName,
+    "applyPosition": applyPosition,
+    "applyTime": applyTime,
+    "maintainId": null,
+    "maintainStuId": null,
+    "maintainName": null,
+    "maintainPosition": null,
+    "maintainTime": null,
+    "completeTime": null,
+    "serviceStar": null,
+    "status": -1, //status为-1表示未接单,为0表示已接单未完成,为1表示此单完成
+    "questionTitle": req.body.applyForm.theme,
+    "questionDes": req.body.applyForm.content,
+    "questionImg": req.body.applyForm.images
+  }
+
+  var newRecord = new Record(insertForm);
+  newRecord.save(function(insertErr, insertDoc){
+    if(insertErr) {
+      res.json({
+        status: '0',
+        msg: insertErr.message
+      })
+    }else {
+      res.json({
+        status: 1,
+        msg: '报修成功'
+      })
+    }
+  })
 })
 
 
@@ -69,7 +132,7 @@ router.post('/upload', function (req, res, next) {
           status: 0,
           msg: "上传成功",
           result: {
-            imgUrl: 'http://localhost:3000/public/images/user/' + stuId + '/' + fileName,
+            imgUrl: 'http://localhost:3000/public/images/record/' + stuId + '/' + fileName,
             tmpUrl: file.ApplyImg.path,
             filename: 'ApplyImg'
           }
@@ -89,25 +152,28 @@ router.post('/upload', function (req, res, next) {
   });
 });
 
-/* POST All users*/
-router.get('/lists', function(req,res,next){
-  User.find(function(err,doc){
-    if(err){
+/* POST user applylist*/
+router.post('/getlist', function (req, res, next) {
+  var applyStuId = req.body.applyStuId;
+  console.log("applyStuId:",applyStuId);
+  Record.find({ $or: [ {"applyStuId": req.body.applyStuId, "status": -1}, {"applyStuId": req.body.applyStuId, "status": 0} ] },function (err, doc) {
+    if (err) {
       res.json({
         status: '0',
         msg: err.message
       });
-    }else {
+    } else {
       if (doc) {
+        console.log("applylistdoc: ",doc)
         res.json({
-          status: '1',
+          status: 1,
           msg: "获取所有用户表成功",
           result: doc
         })
       } else {
         res.json({
-          status: '0',
-          msg: "获取所有用户表失败"
+          status: 0,
+          msg: "没有报修"
         })
       }
     }
@@ -116,30 +182,39 @@ router.get('/lists', function(req,res,next){
 })
 
 /* POST position */
-router.post('/position',function(req,res,next){
+router.post('/position', function (req, res, next) {
   var position = req.body.position;
   var stuId = req.body.stuId;
-  console.log("position: ",position);
-  console.log("stuId: ",stuId);
+  console.log("position: ", position);
+  console.log("stuId: ", stuId);
 
   //更新位置  
-  var conditions = {stuId: req.body.stuId};  
-  var updates = {$set: {position: position}};
-  User.update(conditions, updates, function (error) {  
-      if (error) {  
-          console.error(error);  
-      } else {  
-          console.error("更新位置成功")  
-          res.cookie("position", {lng: position.lng, lat: position.lat}, {
-            path: '/',
-            maxAge: 60
-          })
-          res.json({
-            status: '1',
-            msg: '定位修改成功'
-          })
-      }  
-  });  
+  var conditions = {
+    stuId: req.body.stuId
+  };
+  var updates = {
+    $set: {
+      position: position
+    }
+  };
+  User.update(conditions, updates, function (error) {
+    if (error) {
+      console.error(error);
+    } else {
+      console.error("更新位置成功")
+      res.cookie("position", {
+        lng: position.lng,
+        lat: position.lat
+      }, {
+        path: '/',
+        maxAge: 60
+      })
+      res.json({
+        status: '1',
+        msg: '定位修改成功'
+      })
+    }
+  });
   //查询更新后的数据  
   // User.findOne({stuId: req.body.stuId}, function (error, doc) {  
   //     if (error) {  

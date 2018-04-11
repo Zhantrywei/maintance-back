@@ -54,11 +54,12 @@ router.post('/login', function (req, res, next) {
       console.log("doc: ", doc);
       console.log("输入的明文密码: ", pwd);
       if (doc) {
-        if (doc.exist) {
+        console.log("_id",doc._id)
+        if (doc.exist == 1) {
           //如果用户存在,就解密
           if (decrypt(pwd, doc.pwd)) {
             console.log("解密成功");
-            res.cookie("userId", doc._id, {
+            res.cookie("userId", doc._id.toString(), {
               path: '/',
               maxAge: 1000 * 60 * 60
             })
@@ -168,7 +169,7 @@ router.post('/register', function (req, res, next) {
           "wechat": registerForm.wechat,
           "roleId": roleId,
           "roleName": roleName,
-          "exist": roleId == 2 ? true : false,
+          "exist": roleId == 2 ? 1 : 0,
           "status": false,
           "IDCardImg": registerForm.IDCardImg ? registerForm.IDCardImg : null,
           "StuCardImg": registerForm.StuCardImg ? registerForm.StuCardImg : null

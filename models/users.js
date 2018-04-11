@@ -13,7 +13,7 @@ var usersSchema = new Schema({
   "wechat": String,
   "roleId": Number,
   "roleName": String,
-  "exist": Boolean,
+  "exist": Number,
   "status": Boolean,
   "IDCardImg": String,
   "StuCardImg": String,

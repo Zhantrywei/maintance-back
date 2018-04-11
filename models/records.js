@@ -6,18 +6,18 @@ var recordsSchema = new Schema({
   "applyStuId": String,
   "applyName": String,
   "applyPosition": Object,
+  "applyTime": String,
   "maintainId": String,
   "maintainStuId": String,
   "maintainName": String,
   "maintainPosition": String,
-  "applyTime": Date,
-  "maintainTime": Date,
-  "completeTime": Date,
+  "maintainTime": String,
+  "completeTime": String,
   "serviceStar": Number,
   "status": Number,
   "questionTitle": String,
   "questionDes": String,
-  "questionImg": Array
+  "questionImg": String
 },{versionKey: false});
 
 module.exports = mongoose.model('Record',recordsSchema);

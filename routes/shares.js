@@ -6,3 +6,5 @@ var formidable = require('formidable');
 
 var mongoose = require('mongoose');
 var Shares = require('../models/shares');
+
+module.exports = router;
