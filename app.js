@@ -10,6 +10,7 @@ var multer = require('multer');
 var index = require('./routes/index');
 var users = require('./routes/users');
 var records = require('./routes/records');
+var shares = require('./routes/shares');
 
 var app = express();
 
@@ -29,6 +30,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', index);
 app.use('/api/user', users);
 app.use('/api/record', records);
+app.use('/api/share', shares)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

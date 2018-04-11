@@ -3,7 +3,13 @@ var Schema = mongoose.Schema;
 
 var recordsSchema = new Schema({
   "applyId": String,
+  "applyStuId": String,
+  "applyName": String,
+  "applyPosition": Object,
   "maintainId": String,
+  "maintainStuId": String,
+  "maintainName": String,
+  "maintainPosition": String,
   "applyTime": Date,
   "maintainTime": Date,
   "completeTime": Date,

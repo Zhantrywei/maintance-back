@@ -58,6 +58,10 @@ router.post('/login', function (req, res, next) {
           //如果用户存在,就解密
           if (decrypt(pwd, doc.pwd)) {
             console.log("解密成功");
+            res.cookie("userId", doc._id, {
+              path: '/',
+              maxAge: 1000 * 60 * 60
+            })
             res.cookie("stuId", doc.stuId, {
               path: '/',
               maxAge: 1000 * 60 * 60
