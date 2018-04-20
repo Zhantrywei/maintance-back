@@ -9,7 +9,7 @@ var usersSchema = new Schema({
   "email": String,
   "pwd": String,
   "age": Number,
-  "QQ": String,
+  "qq": String,
   "wechat": String,
   "roleId": Number,
   "roleName": String,

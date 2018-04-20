@@ -9,7 +9,8 @@ var sharesSchema = new Schema({
   "shareDesc": String,
   "shareImgs": Array,
   "comments": Array,
-  "shareTime": Date
+  "shareTime": Date,
+  "status": Number
 },{versionKey: false});
 
 module.exports = mongoose.model('Share',sharesSchema);

@@ -89,7 +89,13 @@ router.post('/login', function (req, res, next) {
                 "roleName": doc.roleName
               }
             })
-          } else {
+          }else if(doc.exist == 0) {
+            res.json({
+              status: '0',
+              msg: '用户未审核'
+            })
+          }
+          else {
             console.log("解密失败");
             res.json({
               status: '0',

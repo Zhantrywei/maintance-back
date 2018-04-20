@@ -225,5 +225,30 @@ router.post('/position', function (req, res, next) {
   // }); 
 })
 
+/** Get List */
+router.get('/lists', function(req,res,next){
+  Record.find(function(err,doc){
+    if(err){
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    }else {
+      if (doc) {
+        res.json({
+          status: '1',
+          msg: "获取所有报修表成功",
+          result: doc
+        })
+      } else {
+        res.json({
+          status: '0',
+          msg: "获取所有报修表失败"
+        })
+      }
+    }
+
+  })
+})
 
 module.exports = router;
