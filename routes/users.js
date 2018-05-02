@@ -1,3 +1,4 @@
+
 var express = require('express');
 var router = express.Router();
 var fs = require('fs');
@@ -5,7 +6,7 @@ var path = require('path');
 var formidable = require('formidable');
 
 var mongoose = require('mongoose');
-var User = require('../models/users');
+var User = require('../models/usersModels');
 
 //require bcrypt;
 var bcrypt = require('bcrypt');
@@ -54,10 +55,17 @@ router.post('/login', function (req, res, next) {
       console.log("doc: ", doc);
       console.log("输入的明文密码: ", pwd);
       if (doc) {
-        console.log("_id",doc._id)
+        console.log("_id", doc._id)
         if (doc.exist == 1) {
           //如果用户存在,就解密
           if (decrypt(pwd, doc.pwd)) {
+            User.update({ stuId: req.body.stuId }, { $set: { status: true } }, function (err) {
+              if (err) {
+                console.log(err);
+              } else {
+                console.log("登录状态为true");
+              }
+            })
             console.log("解密成功");
             res.cookie("userId", doc._id.toString(), {
               path: '/',
@@ -89,10 +97,15 @@ router.post('/login', function (req, res, next) {
                 "roleName": doc.roleName
               }
             })
-          }else if(doc.exist == 0) {
+          } else if (doc.exist == 0) {
             res.json({
               status: '0',
               msg: '用户未审核'
+            })
+          } else if (doc.exist == -1) {
+            res.json({
+              status: '0',
+              msg: '该用户被删除'
             })
           }
           else {
@@ -150,7 +163,7 @@ router.post('/register', function (req, res, next) {
         switch (registerForm.usertype) {
           case 'applicant':
             roleId = 2;
-            roleName = '普通用户';
+            roleName = '报修用户';
             break;
           case 'maintainer':
             roleId = 1;
@@ -178,7 +191,8 @@ router.post('/register', function (req, res, next) {
           "exist": roleId == 2 ? 1 : 0,
           "status": false,
           "IDCardImg": registerForm.IDCardImg ? registerForm.IDCardImg : null,
-          "StuCardImg": registerForm.StuCardImg ? registerForm.StuCardImg : null
+          "StuCardImg": registerForm.StuCardImg ? registerForm.StuCardImg : null,
+          "userImg": null
         }
 
         //只有维修用户才需要操作文件
@@ -356,14 +370,14 @@ router.post('/upload', function (req, res, next) {
 });
 
 /* POST All users*/
-router.get('/lists', function(req,res,next){
-  User.find(function(err,doc){
-    if(err){
+router.get('/lists', function (req, res, next) {
+  User.find(function (err, doc) {
+    if (err) {
       res.json({
         status: '0',
         msg: err.message
       });
-    }else {
+    } else {
       if (doc) {
         res.json({
           status: '1',
@@ -382,30 +396,30 @@ router.get('/lists', function(req,res,next){
 })
 
 /* POST position */
-router.post('/position',function(req,res,next){
+router.post('/position', function (req, res, next) {
   var position = req.body.position;
   var stuId = req.body.stuId;
-  console.log("position: ",position);
-  console.log("stuId: ",stuId);
+  console.log("position: ", position);
+  console.log("stuId: ", stuId);
 
   //更新位置  
-  var conditions = {stuId: req.body.stuId};  
-  var updates = {$set: {position: position}};
-  User.update(conditions, updates, function (error) {  
-      if (error) {  
-          console.error(error);  
-      } else {  
-          console.error("更新位置成功")  
-          res.cookie("position", {lng: position.lng, lat: position.lat}, {
-            path: '/',
-            maxAge: 60
-          })
-          res.json({
-            status: '1',
-            msg: '定位修改成功'
-          })
-      }  
-  });  
+  var conditions = { stuId: req.body.stuId };
+  var updates = { $set: { position: position } };
+  User.update(conditions, updates, function (error) {
+    if (error) {
+      console.error(error);
+    } else {
+      console.error("更新位置成功")
+      res.cookie("position", { lng: position.lng, lat: position.lat }, {
+        path: '/',
+        maxAge: 60
+      })
+      res.json({
+        status: '1',
+        msg: '定位修改成功'
+      })
+    }
+  });
   //查询更新后的数据  
   // User.findOne({stuId: req.body.stuId}, function (error, doc) {  
   //     if (error) {  
@@ -415,6 +429,186 @@ router.post('/position',function(req,res,next){
   //     }  
   // }); 
 })
+
+//管理员修改密码
+router.post('/resetpwd', function (req, res, next) {
+  //发送过来stuid+pwd
+  //密码加密处理
+  var sqlpwd = encrypt(req.body.pwd);
+  //更新密码
+  var conditions = { stuId: req.body.stuId };
+  var updates = { $set: { pwd: sqlpwd } };
+  User.update(conditions, updates, function (error) {
+    if (error) {
+      console.error(error);
+    } else {
+      console.error("更新管理员密码成功");
+      res.json({
+        status: '1',
+        msg: '重置密码成功'
+      })
+    }
+  })
+})
+
+//用户登出
+router.post('/logout', function (req, res, next) {
+  User.update({ stuId: req.body.stuId }, { $set: { status: false } }, function (err) {
+    if (err) {
+      console.error(error);
+      res.json({
+        status: 0,
+        msg: error
+      })
+    } else {
+      console.error("登出成功")
+      res.clearCookie("userId");
+      res.clearCookie("stuId");
+      res.clearCookie("roleId");
+      res.clearCookie("stuName");
+      res.clearCookie("roleName");
+      res.json({
+        status: 1,
+        msg: '登出成功'
+      })
+    }
+  })
+})
+
+//获取用户个人信息
+router.get('/myinfo', function (req, res, next) {
+  console.log(req.query)
+  User.findOne({
+    "stuId": req.query.stuId
+  }, function (err, doc) {
+    if (err) {
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    } else {
+      if (doc) {
+        if (doc.sex == 'boy') {
+          var sex = '男'
+        } else {
+          var sex = '女'
+        }
+        var returnInfo = {
+          stuId: doc.stuId,
+          stuName: doc.stuName,
+          sex: sex,
+          age: doc.age,
+          phoneNum: doc.phoneNum,
+          email: doc.email,
+          age: doc.age,
+          qq: doc.qq,
+          wechat: doc.wechat,
+          userImg: doc.userImg
+        }
+
+        res.json({
+          status: 1,
+          result: returnInfo,
+          msg: "返回个人信息成功"
+        })
+      } else {
+        res.json({
+          status: 0,
+          msg: "返回个人信息失败"
+        })
+      }
+    }
+  })
+})
+
+//修改个人信息
+router.post('/updateinfo', function (req, res, next) {
+  var conditions = { stuId: req.body.stuId };
+  var updates = { $set: { phoneNum: req.body.phoneNum, email: req.body.email, age: req.body.age } };
+  User.update(conditions, updates, function (error) {
+    if (error) {
+      console.error(error);
+    } else {
+      console.error("更新用户信息成功");
+      res.json({
+        status: '1',
+        msg: '更新用户信息成功'
+      })
+    }
+  })
+})
+
+//上传个人头像
+router.post('/uploadUserImg', function (req, res, next) {
+  var form = new formidable.IncomingForm();
+  form.uploadDir = path.join(__dirname + '/../', 'tmp'); //文件保存的临时目录为当前项目下的tmp文件夹
+  if (!fs.existsSync(form.uploadDir)) {
+    fs.mkdir(form.uploadDir);
+  }
+  form.maxFieldsSize = 500 * 1024; //大小限制为最大500k
+  form.keepExtensions = true; //使用文件的原扩展名  
+  form.parse(req, function (err, fields, file) {
+
+    //fields 获取传送过来的data数据对象
+    var stuId = fields.stuId;
+    //设置路径
+    var filePath = '';
+    //文件名称
+    var fileName = '';
+    if (file.UserImg) {
+      console.log(checkFileExt(file.UserImg, '.jpg.jpeg.png.gif'));
+      if (checkFileExt(file.UserImg, '.jpg.jpeg.png.gif')) {
+        // 文件tmp路径file.UserImg.path
+        var targetDir = path.join(__dirname + '/../public/images/user/', stuId);
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdir(targetDir);
+        }
+        var tmpUserImg = file.UserImg.path;
+        fileName = 'UserImg' + file.UserImg.path.substring(file.UserImg.path.lastIndexOf('.'));
+        var targetUserFile = path.join(targetDir, fileName);
+        //移动文件  
+        fs.renameSync(tmpUserImg, targetUserFile, function (err) {
+          if (err) {
+            console.info(err);
+            res.json({
+              status: -1,
+              message: '操作失败'
+            });
+          } else {
+          }
+        });
+        
+        var conditions = { stuId: stuId };
+        var updates = { $set: { userImg:'http://localhost:3000/public/images/user/' + stuId + '/' + fileName } };
+        User.update(conditions, updates, function (error) {
+          if (error) {
+            console.error(error);
+          } else {
+            console.error("上传用户图片成功");
+          }
+        })
+        res.json({
+          status: 1,
+          msg: "上传成功",
+          result: {
+            imgUrl: 'http://localhost:3000/public/images/user/' + stuId + '/' + fileName,
+            filename: 'UserImg'
+          }
+        })
+      } else {
+        res.json({
+          status: -1,
+          msg: '此文件类型不允许上传'
+        })
+      }
+    } else {
+      res.json({
+        status: -1,
+        msg: '上传的文件名有误'
+      })
+    }
+  });
+});
 
 
 module.exports = router;

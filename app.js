@@ -7,7 +7,6 @@ var bodyParser = require('body-parser');
 
 var multer = require('multer');
 
-var index = require('./routes/index');
 var users = require('./routes/users');
 var records = require('./routes/records');
 var shares = require('./routes/shares');
@@ -26,8 +25,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use('/public',express.static('public'));
 
-
-app.use('/', index);
 app.use('/api/user', users);
 app.use('/api/record', records);
 app.use('/api/share', shares)

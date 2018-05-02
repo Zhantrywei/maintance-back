@@ -5,6 +5,6 @@ var path = require('path');
 var formidable = require('formidable');
 
 var mongoose = require('mongoose');
-var Shares = require('../models/shares');
+var Shares = require('../models/sharesModels');
 
 module.exports = router;

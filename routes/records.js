@@ -5,7 +5,7 @@ var path = require('path');
 var formidable = require('formidable');
 
 var mongoose = require('mongoose');
-var Record = require('../models/records');
+var Record = require('../models/recordsModels');
 
 //connect mongoDB
 // mongoose.connect('mongodb://127.0.0.1:27017/maintanceDB');
