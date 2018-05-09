@@ -6,6 +6,7 @@ var formidable = require('formidable');
 
 var mongoose = require('mongoose');
 var Record = require('../models/recordsModels');
+var User = require('../models/usersModels');
 
 //connect mongoDB
 // mongoose.connect('mongodb://127.0.0.1:27017/maintanceDB');
@@ -55,38 +56,62 @@ router.post('/apply', function (req, res, next) {
   });
 
   var insertForm = {
-    "applyId": applyId,
-    "applyStuId": applyStuId,
-    "applyName": applyName,
-    "applyPosition": applyPosition,
-    "applyTime": applyTime,
-    "maintainId": null,
-    "maintainStuId": null,
-    "maintainName": null,
-    "maintainPosition": null,
-    "maintainTime": null,
-    "completeTime": null,
-    "serviceStar": null,
-    "status": -1, //status为-1表示未接单,为0表示已接单未完成,为1表示此单完成
+    "applyUser": {},
     "questionTitle": req.body.applyForm.theme,
     "questionDes": req.body.applyForm.content,
-    "questionImg": req.body.applyForm.images
+    "questionImg": req.body.applyForm.images,
+    "applyTime": applyTime,
+    "status": 0,  //-2删除;-1被取消;0未接单;1接单;2完成
   }
+  console.log("insertForm: ", insertForm)
 
-  var newRecord = new Record(insertForm);
-  newRecord.save(function(insertErr, insertDoc){
-    if(insertErr) {
+  User.findOne({
+    "stuId": req.body.applyStuId
+  }, function (err, doc) {
+    if (err) {
       res.json({
         status: '0',
-        msg: insertErr.message
-      })
-    }else {
-      res.json({
-        status: 1,
-        msg: '报修成功'
-      })
+        msg: err.message
+      });
+    } else {
+      if (doc) {
+        console.log("报修用户信息： ", doc);
+        insertForm.applyUser = {
+          applyObjectId: doc._id,
+          applyStuId: doc.stuId,
+          applyName: doc.stuName,
+          applySex: doc.sex,
+          applyEmail: doc.email,
+          applyPhoneNum: doc.phoneNum,
+          applyQQ: doc.qq,
+          applyWechat: doc.wechat,
+          applyUserImg: doc.userImg,
+          applyPosition: applyPosition
+        }
+        var newRecord = new Record(insertForm);
+        newRecord.save(function (insertErr, insertDoc) {
+          if (insertErr) {
+            res.json({
+              status: '0',
+              msg: insertErr.message
+            })
+          } else {
+            res.json({
+              status: 1,
+              msg: '报修成功'
+            })
+          }
+        })
+      } else {
+        res.json({
+          status: '0',
+          msg: "没有用户信息"
+        })
+      }
     }
-  })
+  });
+
+
 })
 
 
@@ -153,10 +178,11 @@ router.post('/upload', function (req, res, next) {
 });
 
 /* POST user applylist*/
+/**发送申请者的学号，查询status为0||1的报修单返回 */
 router.post('/getlist', function (req, res, next) {
   var applyStuId = req.body.applyStuId;
-  console.log("applyStuId:",applyStuId);
-  Record.find({ $or: [ {"applyStuId": req.body.applyStuId, "status": -1}, {"applyStuId": req.body.applyStuId, "status": 0} ] },function (err, doc) {
+  console.log("applyStuId:", applyStuId);
+  Record.find({ $or: [{ "applyUser.applyStuId": req.body.applyStuId, "status": 0 }, { "applyUser.applyStuId": req.body.applyStuId, "status": 1 }] }, function (err, doc) {
     if (err) {
       res.json({
         status: '0',
@@ -164,7 +190,7 @@ router.post('/getlist', function (req, res, next) {
       });
     } else {
       if (doc) {
-        console.log("applylistdoc: ",doc)
+        console.log("applylistdoc: ", doc)
         res.json({
           status: 1,
           msg: "获取所有用户表成功",
@@ -206,9 +232,9 @@ router.post('/position', function (req, res, next) {
         lng: position.lng,
         lat: position.lat
       }, {
-        path: '/',
-        maxAge: 60
-      })
+          path: '/',
+          maxAge: 60
+        })
       res.json({
         status: '1',
         msg: '定位修改成功'
@@ -226,14 +252,14 @@ router.post('/position', function (req, res, next) {
 })
 
 /** Get List */
-router.get('/lists', function(req,res,next){
-  Record.find(function(err,doc){
-    if(err){
+router.get('/lists', function (req, res, next) {
+  Record.find(function (err, doc) {
+    if (err) {
       res.json({
         status: '0',
         msg: err.message
       });
-    }else {
+    } else {
       if (doc) {
         res.json({
           status: '1',
@@ -250,5 +276,130 @@ router.get('/lists', function(req,res,next){
 
   })
 })
+
+/**获取是否有报修单状态在0或者1，有则返回信息 */
+
+/**获取维修单 */
+router.get('/getRepairList', function (req, res, next) {
+  Record.find({status: 0},function (err, doc) {
+    if (err) {
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    } else {
+      if (doc) {
+        res.json({
+          status: '1',
+          msg: "获取所有报修表成功",
+          result: doc
+        })
+      } else {
+        res.json({
+          status: '0',
+          msg: "获取所有报修表失败"
+        })
+      }
+    }
+
+  })
+})
+
+/**维修用户接单，获取报修单_id，和维修用户的学号，和位置，查询维修用户的个人信息，把status设置为1 */
+router.post('/repair',function(req,res,next){
+  var stuId = req.body.stuId;
+  var repairId = req.body.repairId;
+  var repairTime = req.body.repairTime;
+  var repairUser = {};
+
+  User.findOne({
+    "stuId": req.body.stuId
+  }, function (err, doc) {
+    if (err) {
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    } else {
+      if (doc) {
+        repairUser = {
+          repairObjectId: doc._id,
+          repairStuId: doc.stuId,
+          repairName: doc.stuName,
+          repairSex: doc.sex,
+          repairEmail: doc.email,
+          repairPhoneNum: doc.phoneNum,
+          repairQQ: doc.qq,
+          repairWechat: doc.wechat,
+          repairUserImg: doc.userImg,
+          repairPosition: doc.position,
+          repairNum: doc.repairNum,
+          repairStars: doc.averageStar
+        }
+        console.log("维修用户信息： ", repairUser);
+        
+        var conditions = {
+          _id: repairId
+        };
+        var updates = {
+          $set: {
+            repairUser: repairUser,
+            status: 1,
+            repairTime: repairTime
+          }
+        }
+        Record.update(conditions, updates, function(error){
+          if(error){
+            console.log(error);
+            res.json({
+              status: 0,
+              msg: error
+            })
+          }else {
+            res.json({
+              status: 1,
+              msg: "接单成功"
+            })
+          }
+        })
+      } else {
+        res.json({
+          status: '0',
+          msg: "没有用户信息"
+        })
+      }
+    }
+  });
+})
+
+/**报修用户获取历史记录 */
+router.get('/getApplyHistory',function(req,res,next){
+  Record.find({"applyUser.applyStuId": req.query.stuId,"status":{ $gte:-1} }, function (err, doc) {
+    if (err) {
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    } else {
+      if (doc) {
+        console.log("applylistdoc: ", doc)
+        res.json({
+          status: 1,
+          msg: "获取报修历史成功",
+          result: doc
+        })
+      } else {
+        res.json({
+          status: 0,
+          msg: "没有报修"
+        })
+      }
+    }
+
+  })
+})
+
+
+
 
 module.exports = router;

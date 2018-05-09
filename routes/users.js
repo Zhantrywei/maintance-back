@@ -97,16 +97,6 @@ router.post('/login', function (req, res, next) {
                 "roleName": doc.roleName
               }
             })
-          } else if (doc.exist == 0) {
-            res.json({
-              status: '0',
-              msg: '用户未审核'
-            })
-          } else if (doc.exist == -1) {
-            res.json({
-              status: '0',
-              msg: '该用户被删除'
-            })
           }
           else {
             console.log("解密失败");
@@ -115,10 +105,15 @@ router.post('/login', function (req, res, next) {
               msg: '密码错误'
             })
           }
-        } else {
+        }  else if (doc.exist == 0) {
           res.json({
             status: '0',
-            msg: '用户不存在'
+            msg: '用户未审核'
+          })
+        } else if (doc.exist == -1) {
+          res.json({
+            status: '0',
+            msg: '该用户被删除'
           })
         }
 
@@ -610,5 +605,37 @@ router.post('/uploadUserImg', function (req, res, next) {
   });
 });
 
+//获取个人头像
+router.get('/getuserimg',function(req,res,next){
+  console.log(req.query)
+  User.findOne({stuId: req.query.stuId},function(err,doc){
+    if (err) {
+      res.json({
+        status: '0',
+        msg: err.message
+      });
+    } else {
+      if(doc){
+        if(doc.userImg){
+          res.json({
+            status: 1,
+            result: doc.userImg,
+            msg: "获取用户图像成功"
+          })
+        }else{
+          res.json({
+            status: 0,
+            msg: "没有用户图像"
+          })
+        }
+      }else{
+        res.json({
+          status: '0',
+          msg: "没有找到该用户"
+        })
+      }
+    }
+  })
+})
 
 module.exports = router;
